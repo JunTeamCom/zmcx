@@ -13,6 +13,17 @@
 
 </details>
 
+<details>
+<summary>Windows 界面（Tkinter 版）</summary>
+
+![Windows 界面](docs/screenshot-windows.png)
+
+深色主题：
+
+![Windows 深色主题](docs/screenshot-windows-dark.png)
+
+</details>
+
 ## 功能
 
 - **拆字方案**：逐字根并列展示「字根 + 它自己的码」，如 `岩` → `山ll` `石g`
@@ -21,15 +32,41 @@
 - **多字查询**：一次输入多个字，每个字一张卡片；输入词语时额外给出整词编码
 - **主题三态**：跟随系统 / 浅色 / 深色，选择会被记住
 - **点击复制**：点任意一条编码即可复制
+- **Windows / macOS / Linux 通用**：Windows 上用 Python 自带的 Tkinter，无需装任何第三方依赖
 
 ## 环境要求
 
 - Python ≥ 3.9
-- PyGObject 与 GTK 4
+- 一个图形界面后端，二选一：
+  - **Tkinter**（推荐，Windows / macOS 都能用）：Python 自带，不需要额外安装
+  - **GTK 4**（Linux 上观感更好）：需要 PyGObject 与 GTK 4
 
-已在 Python 3.14.4 + PyGObject 3.56.2 + GTK 4.22.4（Ubuntu 26.04）上测试。
+已在 Windows 11 + Python 3.13.15 + Tkinter 8.6 上测试；GTK 后端在
+Python 3.14.4 + PyGObject 3.56.2 + GTK 4.22.4（Ubuntu 26.04）上测试。
 
 ## 安装
+
+### Windows
+
+1. 到 <https://www.python.org/downloads/> 下载安装 Python 3.9 或更高版本，
+   安装时勾选 **Add python.exe to PATH**（默认就是勾上的）
+2. 克隆本仓库：
+
+```powershell
+git clone git@github.com:JunTeamCom/zmcx.git
+cd zmcx
+```
+
+3. 双击 `start.bat`，或者在命令行里运行：
+
+```powershell
+python zm_gui.py
+```
+
+Windows 自带的 Python 打包器（python.org 的安装包）里已经带了 Tkinter，
+不需要额外安装任何东西。
+
+### Linux
 
 ```bash
 # Debian / Ubuntu
@@ -47,15 +84,29 @@ sudo pacman -S python-gobject gtk4
 ```bash
 git clone git@github.com:JunTeamCom/zmcx.git
 cd zmcx
-./start.sh
+./start.sh          # Linux
 ```
 
-`start.sh` 会先自检环境（Python 版本、PyGObject / GTK 4、数据文件、图形会话），
-缺什么就直接给出对应的安装命令，然后启动程序。也可以直接运行主程序：
+Windows 上双击 `start.bat` 即可。两者都会先自检环境（Python 版本、图形界面后端、
+数据文件），缺什么就直接给出对应的安装命令，然后启动程序。也可以直接运行主程序：
 
 ```bash
-python3 zm_gui.py
+python3 zm_gui.py          # Linux
+python zm_gui.py           # Windows
 ```
+
+### 界面后端
+
+`zm_gui.py` 是统一的入口，会自动挑一个可用的后端：有 PyGObject + GTK 4 就用 GTK 4，
+否则用 Tkinter。也可以显式指定：
+
+```bash
+python zm_gui.py --backend gtk    # 强制用 GTK 4
+python zm_gui.py --backend tk     # 强制用 Tkinter
+python zm_gui.py --help           # 查看用法
+```
+
+两个后端共用同一份取码与着色逻辑（都在 `zm_core.py` 里），界面和结果完全一致。
 
 `start.sh` 支持两个环境变量：
 
@@ -75,6 +126,17 @@ PYTHON=python3.12 ./start.sh             # 指定解释器
 1. 环境变量 `ZM_DIR` 指向的目录
 2. 脚本所在目录
 3. 当前工作目录
+
+## 项目结构
+
+| 文件 | 作用 |
+| --- | --- |
+| `zm_core.py` | 与界面无关的核心逻辑：数据解析、取码回溯、着色规则、码表索引 |
+| `zm_gui.py` | 统一入口，按平台挑选界面后端 |
+| `zm_gui_gtk.py` | GTK 4 界面（Linux） |
+| `zm_gui_tk.py` | Tkinter 界面（Windows / macOS / Linux） |
+| `start.sh` / `start.bat` | Linux / Windows 启动脚本 |
+| `zm.txt` / `zm.yaml` | 数据文件，见下文 |
 
 ## 数据文件
 
@@ -144,7 +206,9 @@ PYTHON=python3.12 ./start.sh             # 指定解释器
 - 63 个双拆法字里，全码的颜色对应**最能解释它**的那一套拆法，可能不是列表里的「拆法1」。
 - 23 条拆字用到了私用区字符（U+E82C，如 `撫` 的 `扌𠂉▯灬`），常规字体都没有该字形，
   程序用 `▯` 占位并在悬停提示里说明。
-- 仅支持 Linux + GTK 4，未做 Windows / macOS 适配。
+- Tkinter 界面是手绘的卡片布局，视觉上比 GTK 版朴素一些；两者功能完全一致。
+- 「跟随系统」在 Windows 上读的是系统「应用主题」的明暗开关，在其它平台上读
+  GTK 的 `settings.ini`；都读不到时按浅色处理。
 
 ## 鸣谢
 

@@ -18,8 +18,8 @@ ENV/
 .coverage
 htmlcov/
 
-# 本程序不会在仓库目录写配置（主题选择存在 ~/.config/zm-chaxun/），
-# 这里仅供把配置临时放进来调试时用
+# 本程序不会在仓库目录写配置（主题选择存在 ~/.config/zm-chaxun/ 或
+# Windows 的 %APPDATA%\zm-chaxun\），这里仅供把配置临时放进来调试时用
 settings.json
 
 # 编辑器 / IDE

@@ -6,6 +6,8 @@
 #   ZM_DIR=/path/to/data ./start.sh 指定数据文件所在目录
 #   PYTHON=python3.12 ./start.sh    指定解释器（默认 python3）
 #
+# 界面后端优先用 GTK 4，没有就退回 Tkinter。
+#
 # 退出码：0 正常结束；1 环境不满足；2 缺少文件
 
 set -euo pipefail
@@ -70,28 +72,47 @@ PY
 }
 python_ok || die "Python 版本过低（$(("$PYTHON" -c 'import sys;print("%d.%d" % sys.version_info[:2])' 2>/dev/null || echo unknown))），需要 3.9 或更高"
 
-# 2. PyGObject + GTK 4
-gtk_ok() {
+# 2. 界面后端：优先 GTK 4，其次 Tkinter（Python 自带）
+detect_backend() {
     "$PYTHON" - <<'PY'
-import gi
-gi.require_version("Gtk", "4.0")
-from gi.repository import Gtk  # noqa: F401
+import importlib.util
+import os
+import sys
+
+if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY") or sys.platform in ("win32", "darwin"):
+    try:
+        import gi
+
+        gi.require_version("Gtk", "4.0")
+        from gi.repository import Gtk  # noqa: F401
+
+        print("gtk")
+        sys.exit(0)
+    except Exception:
+        pass
+
+if importlib.util.find_spec("tkinter") is not None:
+    print("tk")
+    sys.exit(0)
+
+sys.exit(1)
 PY
 }
-if ! gtk_ok 2>/dev/null; then
-    printf '%s错误：缺少 PyGObject 或 GTK 4。%s\n' "$C_ERR" "$C_OFF" >&2
+
+if ! BACKEND="$(detect_backend 2>/dev/null)"; then
+    printf '%s错误：找不到可用的图形界面后端。%s\n' "$C_ERR" "$C_OFF" >&2
     cat >&2 <<'EOF'
-按发行版安装：
+至少需要装一个界面后端：
 
-  Debian / Ubuntu   sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0
-  Fedora            sudo dnf install python3-gobject gtk4
-  Arch Linux        sudo pacman -S python-gobject gtk4
+  Tkinter（最简单，Windows 上就用它）
+    Debian / Ubuntu   sudo apt install python3-tk
+    Fedora            sudo dnf install python3-tkinter
+    Arch Linux        sudo pacman -S tk
 
-若系统里装了多个 Python，请用 PYTHON 指定装好 PyGObject 的那个。
-
-查看详细报错：
-
-  python3 -c 'import gi; gi.require_version("Gtk", "4.0"); from gi.repository import Gtk'
+  或者 GTK 4
+    Debian / Ubuntu   sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0
+    Fedora            sudo dnf install python3-gobject gtk4
+    Arch Linux        sudo pacman -S python-gobject gtk4
 EOF
     exit 1
 fi
@@ -105,11 +126,11 @@ for name in zm.txt zm.yaml; do
         || die "缺少数据文件 $DATA_DIR/$name（可用 ZM_DIR 指定所在目录）" 2
 done
 
-# 4. 图形环境
-if [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+# 4. 图形环境（只有走 GTK 时才需要 DISPLAY/WAYLAND_DISPLAY）
+if [ "$BACKEND" = "gtk" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
     die "没有检测到图形环境（DISPLAY 与 WAYLAND_DISPLAY 都未设置）。这是 GUI 程序，需要图形会话。"
 fi
 
 # 5. 启动
-info "启动 zmcx（数据：$DATA_DIR）"
+info "启动 zmcx（界面：$BACKEND，数据：$DATA_DIR）"
 exec "$PYTHON" "$APP" "$@"
