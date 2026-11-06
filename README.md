@@ -47,18 +47,34 @@ sudo pacman -S python-gobject gtk4
 ```bash
 git clone git@github.com:JunTeamCom/zmcx.git
 cd zmcx
+./start.sh
+```
+
+`start.sh` 会先自检环境（Python 版本、PyGObject / GTK 4、数据文件、图形会话），
+缺什么就直接给出对应的安装命令，然后启动程序。也可以直接运行主程序：
+
+```bash
 python3 zm_gui.py
 ```
 
-程序按以下顺序查找数据文件 `zm.txt` 与 `zm.yaml`：
+`start.sh` 支持两个环境变量：
+
+| 变量 | 作用 | 默认 |
+| --- | --- | --- |
+| `ZM_DIR` | 数据文件所在目录 | 脚本所在目录 |
+| `PYTHON` | 使用的解释器 | `python3` |
+
+```bash
+ZM_DIR=/path/to/data ./start.sh          # 数据放在别处
+PYTHON=python3.12 ./start.sh             # 指定解释器
+./start.sh --help                        # 查看用法
+```
+
+程序自身按以下顺序查找数据文件 `zm.txt` 与 `zm.yaml`：
 
 1. 环境变量 `ZM_DIR` 指向的目录
 2. 脚本所在目录
 3. 当前工作目录
-
-```bash
-ZM_DIR=/path/to/data python3 zm_gui.py   # 数据放在别处时
-```
 
 ## 数据文件
 
