@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+venv/
+.venv/
+env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 本程序不会在仓库目录写配置（主题选择存在 ~/.config/zm-chaxun/），
+# 这里仅供把配置临时放进来调试时用
+settings.json
+
+# 编辑器 / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.\#*
+
+# 系统
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 发行包
+zmcx*.zip
+*.tar.gz
