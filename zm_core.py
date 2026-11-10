@@ -24,6 +24,9 @@ zm.txt 一行形如 `岩\t[山石\xa0ll\xa0g]`：NBSP 分隔，前面是字根�
 「全码」即每字完整取码（多为四键），与本码表中的 1–3 键简码相对。
 全码里每个字母按实际出处着色，末尾补码（vv / aa / pp 等）用中性灰。
 
+基本笔划字按笔形取全码（丿 maaa、丶 saaa）。码表里 丶 只收了三键的 saa，
+缺四键全码，这里按笔形补出 saaa，免得全码落到低频兜底码 aapp 上。
+
 输入多个字时，对每个字分别查询并单独展示。
 """
 
@@ -39,6 +42,11 @@ DATA_NAMES = ("zm.txt", "zm.yaml")
 
 NBSP = "\xa0"
 _CODE_RE = re.compile(r"^[a-z]+$")
+
+# 基本笔划字按笔形取全码：丿 MAAA、丶 SAAA。zm.yaml 里 丶 只收了三键的 saa
+# （另有低频兜底 aapp），缺四键全码，会让全码选到兜底码而无法回溯字根；
+# 这里按笔形把它补出来。
+SPECIAL_FULL_CODES = {"丶": "saaa"}
 
 # 一套拆法：(字根, 该字根贡献的码) 组成的序列
 Decomp = list[tuple[str, str]]
@@ -133,6 +141,26 @@ def parse_decomp(raw: str) -> list[Decomp]:
 ROLE_COLORS = ("#3a72cf", "#2e9a63", "#c87a21", "#b34a80")
 PAD_CODE_COLOR = "#8f8f8f"  # 全码末尾的补码（vv / aa / pp 等）
 ROLE_LABELS = ("首根", "次根", "次末根", "末根")
+
+
+def add_special_full_code(char: str, codes: list[tuple[str, int]]) -> list[tuple[str, int]]:
+    """给个别基本笔划字补上码表缺的全码。
+
+    郑码的基本笔划字按笔形取全码（丿 MAAA、丶 SAAA），但 zm.yaml 里 丶 只有
+    三键的 saa，缺四键全码。不补的话，全码会选到低频兜底码 aapp，回溯不到字根。
+    补出来的全码沿用同前缀简码的权重，保证仍然排在一起。
+
+    >>> add_special_full_code("丶", [("saa", 1), ("aapp", 121)])
+    [('saa', 1), ('saaa', 1), ('aapp', 121)]
+    >>> add_special_full_code("岩", [("llg", 1)])
+    [('llg', 1)]
+    """
+    full = SPECIAL_FULL_CODES.get(char)
+    if full is None or any(code == full for code, _ in codes):
+        return codes
+    weights = [weight for code, weight in codes if code and full.startswith(code)]
+    weight = min(weights) if weights else 1
+    return sorted([*codes, (full, weight)], key=lambda item: item[1])
 
 
 def pick_full_code(codes: list[tuple[str, int]]) -> str | None:
@@ -432,7 +460,10 @@ class ZmDict:
         self.loaded = True
 
     def lookup(self, char: str) -> tuple[list[Decomp], list[tuple[str, int]]]:
-        return self.decomp.get(char, []), self.codes.get(char, [])
+        return (
+            self.decomp.get(char, []),
+            add_special_full_code(char, self.codes.get(char, [])),
+        )
 
     def query(self, text: str) -> tuple[list[tuple[str, int]], list[tuple[str, list[Decomp], list[tuple[str, int]]]]]:
         """返回 (整词编码, 逐字结果)。整词编码即 grep $'^中国\t' zm.yaml 的结果。"""
